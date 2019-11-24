@@ -105,12 +105,31 @@ class DataLoader(object):
         """Get the total number of batches."""
         return math.ceil(len(self._dataset) / self._batch_size)
 
+    def _get_features(self):
+        """column getter."""
+        indices = sum(self._dataset.index_pool[:], [])
+        x, _ = self._dataset[indices]
+        return x
+
     @property
     def id_left(self) -> np.ndarray:
         """`id_left` getter."""
-        indices = sum(self._dataset.index_pool[:], [])
-        x, _ = self._dataset[indices]
-        return x['id_left']
+        return self._get_features()['id_left']
+
+    @property
+    def id_right(self) -> np.ndarray:
+        """`id_left` getter."""
+        return self._get_features()['id_right']
+
+    @property
+    def text_right(self) -> np.ndarray:
+        """`id_left` getter."""
+        return self._get_features()['text_left']
+
+    @property
+    def text_left(self) -> np.ndarray:
+        """`id_left` getter."""
+        return self._get_features()['text_left']
 
     @property
     def label(self) -> np.ndarray:
