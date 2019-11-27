@@ -1,29 +1,49 @@
 """Matchzoo DataPack, pair-wise tuple (feature) and context as input."""
 
-import typing
-import inspect
-from pathlib import Path
 import functools
+import inspect
+import math
+import multiprocessing as mp
+import typing
+from pathlib import Path
 
 import dill
-from tqdm import tqdm
 import numpy as np
 import pandas as pd
-
-import matchzoo
+from tqdm import tqdm
 
 tqdm.pandas()
 
 
 def _convert_to_list_index(
-    index: typing.Union[int, slice, np.array],
-    length: int
+        index: typing.Union[int, slice, np.array],
+        length: int
 ):
     if isinstance(index, int):
         index = [index]
     elif isinstance(index, slice):
         index = list(range(*index.indices(length)))
     return index
+
+
+def _apply_on_row(func, data_subset):
+    return data_subset.apply(func)
+
+
+def _parallelize_on_rows(data, func, num_of_processes=-1, verbose=1, desc=None,
+                         batch_size=10):
+    n_batch = math.ceil(len(data) / batch_size)
+    data_splits = filter(lambda x: len(x),
+                         np.array_split(data, n_batch))
+    row_func = functools.partial(_apply_on_row, func)
+    if num_of_processes == -1:
+        pool = mp.Pool()
+    else:
+        pool = mp.Pool(num_of_processes)
+    result = pd.concat(tqdm(pool.imap(row_func, data_splits), desc=desc, disable=not bool(verbose), total=n_batch))
+    pool.close()
+    pool.join()
+    return result
 
 
 class DataPack(object):
@@ -314,7 +334,7 @@ class DataPack(object):
         self._relation = self._relation.drop(columns='label')
 
     @_optional_inplace
-    def append_text_length(self, verbose=1):
+    def append_text_length(self, verbose=1, multiprocessing=False):
         """
         Append `length_left` and `length_right` columns.
 
@@ -338,14 +358,16 @@ class DataPack(object):
 
         """
         self.apply_on_text(len, rename=('length_left', 'length_right'),
-                           inplace=True, verbose=verbose)
+                           inplace=True, multiprocessing=multiprocessing,
+                           verbose=verbose)
 
     @_optional_inplace
     def apply_on_text(
-        self, func: typing.Callable,
-        mode: str = 'both',
-        rename: typing.Optional[str] = None,
-        verbose: int = 1
+            self, func: typing.Callable,
+            mode: str = 'both',
+            rename: typing.Optional[str] = None,
+            multiprocessing=False,
+            verbose: int = 1
     ):
         """
         Apply `func` to text columns based on `mode`.
@@ -393,15 +415,30 @@ class DataPack(object):
             ...                         inplace=True)
 
         """
-        if mode == 'both':
-            self._apply_on_text_both(func, rename, verbose=verbose)
-        elif mode == 'left':
-            self._apply_on_text_left(func, rename, verbose=verbose)
-        elif mode == 'right':
-            self._apply_on_text_right(func, rename, verbose=verbose)
+        if multiprocessing:
+            if mode == 'both':
+                self._apply_on_text_both_parallel(func, rename,
+                                                  verbose=verbose)
+            elif mode == 'left':
+                self._apply_on_text_left_parallel(func, rename,
+                                                  verbose=verbose)
+            elif mode == 'right':
+                self._apply_on_text_right_parallel(func, rename,
+                                                   verbose=verbose)
+            else:
+                raise ValueError(f"{mode} is not a valid mode type."
+                                 f"Must be one of `left` `right` `both`.")
+
         else:
-            raise ValueError(f"{mode} is not a valid mode type."
-                             f"Must be one of `left` `right` `both`.")
+            if mode == 'both':
+                self._apply_on_text_both(func, rename, verbose=verbose)
+            elif mode == 'left':
+                self._apply_on_text_left(func, rename, verbose=verbose)
+            elif mode == 'right':
+                self._apply_on_text_right(func, rename, verbose=verbose)
+            else:
+                raise ValueError(f"{mode} is not a valid mode type."
+                                 f"Must be one of `left` `right` `both`.")
 
     def _apply_on_text_right(self, func, rename, verbose=1):
         name = rename or 'text_right'
@@ -423,6 +460,27 @@ class DataPack(object):
         left_name, right_name = rename or ('text_left', 'text_right')
         self._apply_on_text_left(func, rename=left_name, verbose=verbose)
         self._apply_on_text_right(func, rename=right_name, verbose=verbose)
+
+    def _apply_on_text_left_parallel(self, func, rename, verbose=1):
+        name = rename or 'text_left'
+        desc = "Processing " + name + " with " + func.__name__
+        self._left[name] = _parallelize_on_rows(self._left['text_left'], func,
+                                                verbose=verbose, desc=desc)
+
+    def _apply_on_text_right_parallel(self, func, rename, verbose=1):
+        name = rename or 'text_right'
+        desc = "Processing " + name + " with " + func.__name__
+        self._right[name] = _parallelize_on_rows(
+            self._right['text_right'],
+            func,
+            verbose=verbose, desc=desc)
+
+    def _apply_on_text_both_parallel(self, func, rename, verbose=1):
+        left_name, right_name = rename or ('text_left', 'text_right')
+        self._apply_on_text_left_parallel(func, rename=left_name,
+                                          verbose=verbose)
+        self._apply_on_text_right_parallel(func, rename=right_name,
+                                           verbose=verbose)
 
     class FrameView(object):
         """FrameView."""

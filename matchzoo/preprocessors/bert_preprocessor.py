@@ -1,10 +1,8 @@
 """Bert Preprocessor."""
 
-from pytorch_transformers import BertTokenizer
-
-from . import units
 from matchzoo import DataPack
 from matchzoo.engine.base_preprocessor import BasePreprocessor
+from pytorch_transformers import BertTokenizer
 
 
 class BertPreprocessor(BasePreprocessor):
@@ -16,14 +14,15 @@ class BertPreprocessor(BasePreprocessor):
 
     """
 
-    def __init__(self, mode: str = 'bert-base-uncased'):
+    def __init__(self, mode: str = 'bert-base-uncased',
+                 multiprocessing: bool = False):
         """Initialization."""
-        super().__init__()
+        super().__init__(multiprocessing)
         self._tokenizer = BertTokenizer.from_pretrained(mode)
 
     def fit(self, data_pack: DataPack, verbose: int = 1):
         """Tokenizer is all BertPreprocessor's need."""
-        return
+        return self
 
     def transform(self, data_pack: DataPack, verbose: int = 1) -> DataPack:
         """
@@ -34,8 +33,12 @@ class BertPreprocessor(BasePreprocessor):
 
         :return: Transformed data as :class:`DataPack` object.
         """
+        data_pack = data_pack.copy()
         data_pack.apply_on_text(self._tokenizer.encode,
-                                mode='both', inplace=True, verbose=verbose)
-        data_pack.append_text_length(inplace=True, verbose=verbose)
+                                mode='both', inplace=True,
+                                multiprocessing=self.multiprocessing,
+                                verbose=verbose)
+        data_pack.append_text_length(inplace=True, verbose=verbose,
+                                     multiprocessing=self.multiprocessing)
         data_pack.drop_empty(inplace=True)
         return data_pack
