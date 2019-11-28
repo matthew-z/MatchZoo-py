@@ -340,7 +340,8 @@ class Trainer:
 
     def predict(
         self,
-        dataloader: DataLoader
+        dataloader: DataLoader,
+        verbose=1
     ) -> np.array:
         """
         Generate output predictions for the input samples.
@@ -352,7 +353,8 @@ class Trainer:
         with torch.no_grad():
             self._model.eval()
             predictions = []
-            for batch in dataloader:
+            for batch in tqdm(dataloader, desc="Prediction",
+                              disable=(not verbose)):
                 inputs = batch[0]
                 outputs = self._model(inputs).detach().cpu()
                 predictions.append(outputs)
