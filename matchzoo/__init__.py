@@ -17,7 +17,7 @@ from .data_pack import load_data_pack
 from . import preprocessors
 from . import dataloader
 
-from .preprocessors.chain_transform import chain_transform, ChainTransform
+from .preprocessors.chain_transform import ChainTransform
 
 from . import auto
 from . import tasks

@@ -71,7 +71,7 @@ class FrequencyFilter(StatefulUnit):
     def transform(self, input_: list) -> list:
         """Transform a list of tokens by filtering out unwanted words."""
         valid_terms = self._context[self._mode]
-        return list(filter(lambda token: token in valid_terms, input_))
+        return [token for token in input_ if token in valid_terms]
 
     @classmethod
     def _tf(cls, list_of_tokens: list) -> dict:

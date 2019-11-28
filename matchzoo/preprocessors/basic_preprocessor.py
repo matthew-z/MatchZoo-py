@@ -113,8 +113,8 @@ class BasicPreprocessor(BasePreprocessor):
                                                        mode='right',
                                                        verbose=verbose)
         data_pack = data_pack.apply_on_text(
-            fitted_filter_unit.transform,
-            mode='right', multiprocessing=self.multiprocessing,
+            ChainTransform(fitted_filter_unit),
+            mode='right', multiprocessing=False,
             verbose=verbose)
         self._context['filter_unit'] = fitted_filter_unit
 
@@ -127,7 +127,7 @@ class BasicPreprocessor(BasePreprocessor):
 
         if self._ngram_size:
             data_pack = data_pack.apply_on_text(
-                self._context['ngram_process_unit'].transform,
+                ChainTransform(self._context['ngram_process_unit']),
                 mode='both',
                 multiprocessing=self.multiprocessing,
                 verbose=verbose
@@ -152,25 +152,24 @@ class BasicPreprocessor(BasePreprocessor):
                                 multiprocessing=self.multiprocessing,
                                 verbose=verbose)
 
-        data_pack.apply_on_text(self._context['filter_unit'].transform,
+        data_pack.apply_on_text(ChainTransform(self._context['filter_unit']),
                                 mode='right', inplace=True,
-                                multiprocessing=self.multiprocessing,
                                 verbose=verbose)
-        data_pack.apply_on_text(self._context['vocab_unit'].transform,
+        data_pack.apply_on_text(ChainTransform(self._context['vocab_unit']),
                                 mode='both', inplace=True,
-                                multiprocessing=self.multiprocessing,
                                 verbose=verbose)
 
         if self._truncated_length_left:
-            data_pack.apply_on_text(self._left_truncatedlength_unit.transform,
+            data_pack.apply_on_text(ChainTransform(self._left_truncatedlength_unit),
                                     mode='left', inplace=True,
                                     multiprocessing=self.multiprocessing,
                                     verbose=verbose)
         if self._truncated_length_right:
-            data_pack.apply_on_text(self._right_truncatedlength_unit.transform,
+            data_pack.apply_on_text(ChainTransform(self._right_truncatedlength_unit),
                                     mode='right', inplace=True,
                                     multiprocessing=self.multiprocessing,
                                     verbose=verbose)
+
         data_pack.append_text_length(inplace=True,
                                      multiprocessing=self.multiprocessing,
                                      verbose=verbose)
