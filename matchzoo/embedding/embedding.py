@@ -1,15 +1,53 @@
 """Matchzoo toolkit for token embedding."""
 
-import csv
 import typing
 
 import numpy as np
-import pandas as pd
 
 import matchzoo as mz
+from .embedding_helper import _GloVe, _FastText, _Word2Vec
 
 
-class Embedding(object):
+class EmbeddingBase(object):
+    def build_matrix(self,
+                     term_index: typing.Union[
+                         dict, mz.preprocessors.units.Vocabulary.TermIndex]):
+        raise NotImplementedError
+
+
+class EmebeddingV2(EmbeddingBase):
+    def __init__(self, data):
+        self._data = data
+        self._output_dim = self._data.dim
+
+    def build_matrix(
+            self,
+            term_index: typing.Union[
+                dict, mz.preprocessors.units.Vocabulary.TermIndex],
+            lower_case_backup=False
+    ) -> np.ndarray:
+        return self._data.build_matrix(term_index).numpy()
+
+
+class GloVe(EmebeddingV2):
+    def __init__(self, name: str = "840B", dim: int = 300):
+        data = _GloVe(name=name, dim=dim)
+        super().__init__(data)
+
+
+class FastText(EmebeddingV2):
+    def __init__(self, language: str = "en"):
+        data = _FastText(language=language)
+        super().__init__(data)
+
+
+class Word2Vec(EmebeddingV2):
+    def __init__(self):
+        data = _Word2Vec()
+        super().__init__(data)
+
+
+class Embedding(EmbeddingBase):
     """
     Embedding class.
 
@@ -48,9 +86,9 @@ class Embedding(object):
         self._output_dim = output_dim
 
     def build_matrix(
-        self,
-        term_index: typing.Union[
-            dict, mz.preprocessors.units.Vocabulary.TermIndex]
+            self,
+            term_index: typing.Union[
+                dict, mz.preprocessors.units.Vocabulary.TermIndex]
     ) -> np.ndarray:
         """
         Build a matrix using `term_index`.
@@ -69,10 +107,9 @@ class Embedding(object):
             if term in valid_keys:
                 matrix[index] = self._data[term]
             else:
-                matrix[index] = np.random.uniform(-0.2, 0.2, size=self._output_dim)
-
+                matrix[index] = np.random.uniform(-0.2, 0.2,
+                                                  size=self._output_dim)
         return matrix
-
 
 def load_from_file(file_path: str, mode: str = 'word2vec') -> Embedding:
     """

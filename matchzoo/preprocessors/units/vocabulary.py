@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from .stateful_unit import StatefulUnit
 
 
@@ -46,7 +48,7 @@ class Vocabulary(StatefulUnit):
         self._context['term_index'] = self.TermIndex()
         self._context['index_term'] = dict()
 
-    class TermIndex(dict):
+    class TermIndex(OrderedDict):
         """Map term to index."""
 
         def __missing__(self, key):
@@ -60,9 +62,10 @@ class Vocabulary(StatefulUnit):
         self._context['index_term'][0] = self._pad
         self._context['index_term'][1] = self._oov
         terms = set(tokens)
-        for index, term in enumerate(terms):
-            self._context['term_index'][term] = index + 2
-            self._context['index_term'][index + 2] = term
+        for term in enumerate(terms):
+            idx = len(self._context['term_index'])
+            self._context['term_index'][term] = idx
+            self._context['index_term'][idx] = term
 
     def transform(self, input_: list) -> list:
         """Transform a list of tokens to corresponding indices."""
