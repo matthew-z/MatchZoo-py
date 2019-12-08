@@ -1,4 +1,4 @@
-""" Forked from https://github.com/pytorch/text
+"""Forked from https://github.com/pytorch/text.
 
 BSD 3-Clause License
 
@@ -38,10 +38,8 @@ import tarfile
 import typing
 import zipfile
 
-import numpy as np
 import six
 import torch
-import tqdm
 from six.moves.urllib.request import urlretrieve
 from tqdm import tqdm
 
@@ -69,18 +67,10 @@ def _infer_shape(f):
 
 
 def reporthook(t):
-    """https://github.com/tqdm/tqdm"""
+    """https://github.com/tqdm/tqdm."""
     last_b = [0]
 
     def inner(b=1, bsize=1, tsize=None):
-        """
-        b: int, optionala
-        Number of blocks just transferred [default: 1].
-        bsize: int, optional
-        Size of each block (in tqdm units) [default: 1].
-        tsize: int, optional
-        Total size (in tqdm units). If [default: None] remains unchanged.
-        """
         if tsize is not None:
             t.total = tsize
         t.update((b - last_b[0]) * bsize)
@@ -90,9 +80,12 @@ def reporthook(t):
 
 
 class Vectors(object):
+    """Vector-based Embedding Base Class."""
+
     def __init__(self, name, cache=None,
                  url=None, unk_init=None, max_vectors=None):
-        """
+        """Init Vectors.
+
         Arguments:
            name: name of the file that contains the vectors
            cache: directory for cached vectors
@@ -115,10 +108,10 @@ class Vectors(object):
         self.dim = None
         self.unk_init = torch.Tensor.zero_ if unk_init is None else unk_init
         self.unk_idx = None
-        self.cache(name, cache, url=url, max_vectors=max_vectors)
-        self.add_unk()
+        self._cache(name, cache, url=url, max_vectors=max_vectors)
+        self._add_unk()
 
-    def add_unk(self):
+    def _add_unk(self):
         if UNK in self.stoi:
             self.unk_idx = self.stoi[UNK]
             return
@@ -129,12 +122,17 @@ class Vectors(object):
         self.vectors = torch.cat([self.vectors, unk_vec], dim=0)
 
     def __getitem__(self, token):
+        """Return the embedding vector for a given token.
+
+        The embedding of unknown will be returned when the token
+        is not in the vocabulary
+        """
         if token in self.stoi:
             return self.vectors[self.stoi[token]]
         else:
             return self.vectors[self.unk_idx]
 
-    def cache(self, name, cache, url=None, max_vectors=None):
+    def _cache(self, name, cache, url=None, max_vectors=None):
         import ssl
         ssl._create_default_https_context = ssl._create_unverified_context
         if os.path.isfile(name):
@@ -203,17 +201,16 @@ class Vectors(object):
                     if dim is None and len(entries) > 1:
                         dim = len(entries)
                     elif len(entries) == 1:
-                        logger.warning("Skipping token {} with 1-dimensional "
-                                       "vector {}; likely a header".format(
-                            word, entries))
+                        logger.warning(
+                            "Skipping token {} with 1-dimensional "
+                            "vector {}; likely a header".format(word, entries))
                         continue
                     elif dim != len(entries):
                         raise RuntimeError(
                             "Vector for token {} has {} dimensions, but previously "
                             "read vectors have {} dimensions. All vectors must have "
                             "the same number of dimensions.".format(word, len(
-                                entries),
-                                                                    dim))
+                                entries), dim))
 
                     try:
                         if isinstance(word, six.binary_type):
@@ -244,6 +241,7 @@ class Vectors(object):
             self.itos, self.stoi, self.vectors, self.dim = torch.load(path_pt)
 
     def __len__(self):
+        """Return the number of tokens."""
         return len(self.vectors)
 
     def build_matrix(
@@ -252,12 +250,13 @@ class Vectors(object):
                 dict, mz.preprocessors.units.Vocabulary.TermIndex],
             lower_case_backup=False
     ) -> torch.Tensor:
-
+        """Build embedding matrix for given tokens."""
         tokens = term_index.keys()
         return self._get_vecs_by_tokens(tokens, lower_case_backup)
 
     def _get_vecs_by_tokens(self, tokens, lower_case_backup=False):
         """Look up embedding vectors of tokens.
+
         Arguments:
             tokens: a token or a list of tokens. if `tokens` is a string,
                 returns a 1-D tensor of shape `self.dim`; if `tokens` is a
@@ -315,10 +314,10 @@ class _FastText(Vectors):
         super(_FastText, self).__init__(name, url=url, cache=cache, **kwargs)
 
 
-
 class _Word2Vec(Vectors):
-    def __init__(self,  **kwargs):
-        url = 'https://allennlp.s3.amazonaws.com/datasets/word2vec/GoogleNews-vectors-negative300.txt.gz'
+    def __init__(self, **kwargs):
+        url = 'https://allennlp.s3.amazonaws.com/datasets/word2vec' \
+              '/GoogleNews-vectors-negative300.txt.gz '
         name = os.path.basename(url)
         cache = mz.USER_DATA_DIR.joinpath("word2vec")
         super(_Word2Vec, self).__init__(name, url=url, cache=cache, **kwargs)

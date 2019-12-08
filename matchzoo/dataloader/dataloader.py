@@ -106,7 +106,7 @@ class DataLoader(object):
         return math.ceil(len(self._dataset) / self._batch_size)
 
     def _get_features(self):
-        """column getter."""
+        """Column getter."""
         indices = sum(self._dataset.index_pool[:], [])
         x, _ = self._dataset[indices]
         return x

@@ -40,7 +40,8 @@ def _parallelize_on_rows(data, func, num_of_processes=-1, verbose=1, desc=None,
         pool = mp.Pool()
     else:
         pool = mp.Pool(num_of_processes)
-    result = pd.concat(tqdm(pool.imap(row_func, data_splits), desc=desc, disable=not bool(verbose), total=n_batch))
+    result = pd.concat(tqdm(pool.imap(row_func, data_splits), desc=desc,
+                            disable=not bool(verbose), total=n_batch))
     pool.close()
     pool.join()
     return result
