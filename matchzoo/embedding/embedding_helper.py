@@ -268,10 +268,6 @@ class Vectors(object):
                 if True, each token in the original case will be looked up first,
                 if not found in the keys of the property `stoi`, the token in the
                 lower case will be looked up. Default: False.
-        Examples:
-            >>> examples = ['chip', 'baby', 'Beautiful']
-            >>> vec = text.vocab.GloVe(name='6B', dim=50)
-            >>> ret = vec.get_vecs_by_tokens(tokens, lower_case_backup=True)
         """
         to_reduce = False
 

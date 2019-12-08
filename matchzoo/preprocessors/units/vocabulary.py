@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from .stateful_unit import StatefulUnit
+from matchzoo.preprocessors.units import StatefulUnit
 
 
 class Vocabulary(StatefulUnit):
@@ -62,7 +62,7 @@ class Vocabulary(StatefulUnit):
         self._context['index_term'][0] = self._pad
         self._context['index_term'][1] = self._oov
         terms = set(tokens)
-        for term in enumerate(terms):
+        for term in terms:
             idx = len(self._context['term_index'])
             self._context['term_index'][term] = idx
             self._context['index_term'][idx] = term
