@@ -1,14 +1,15 @@
 """Basic Preprocessor."""
 
-from tqdm import tqdm
 import typing
 
-from . import units
 from matchzoo import DataPack
 from matchzoo.engine.base_preprocessor import BasePreprocessor
-from .build_vocab_unit import build_vocab_unit
+from tqdm import tqdm
+
+from . import units
 from .build_unit_from_data_pack import build_unit_from_data_pack
-from .chain_transform import chain_transform
+from .build_vocab_unit import build_vocab_unit
+from .chain_transform import ChainTransform
 
 tqdm.pandas()
 
@@ -30,6 +31,7 @@ class BasicPreprocessor(BasePreprocessor):
     :param filter_high_freq: Float, upper bound value used by
         :class:`FrequenceFilterUnit`.
     :param remove_stop_words: Bool, use :class:`StopRemovalUnit` unit or not.
+    :param multiprocessing: Bool, Whether to use multi-core.
 
     Example:
         >>> import matchzoo as mz
@@ -65,9 +67,10 @@ class BasicPreprocessor(BasePreprocessor):
                  filter_low_freq: float = 1,
                  filter_high_freq: float = float('inf'),
                  remove_stop_words: bool = False,
-                 ngram_size: typing.Optional[int] = None):
+                 ngram_size: typing.Optional[int] = None,
+                 multiprocessing: bool = False):
         """Initialization."""
-        super().__init__()
+        super().__init__(multiprocessing)
         self._truncated_mode = truncated_mode
         self._truncated_length_left = truncated_length_left
         self._truncated_length_right = truncated_length_right
@@ -101,15 +104,18 @@ class BasicPreprocessor(BasePreprocessor):
         :param verbose: Verbosity.
         :return: class:`BasicPreprocessor` instance.
         """
-        data_pack = data_pack.apply_on_text(chain_transform(self._units),
+        data_pack = data_pack.apply_on_text(ChainTransform(self._units),
+                                            multiprocessing=self.multiprocessing,
                                             verbose=verbose)
         fitted_filter_unit = build_unit_from_data_pack(self._filter_unit,
                                                        data_pack,
                                                        flatten=False,
                                                        mode='right',
                                                        verbose=verbose)
-        data_pack = data_pack.apply_on_text(fitted_filter_unit.transform,
-                                            mode='right', verbose=verbose)
+        data_pack = data_pack.apply_on_text(
+            ChainTransform(fitted_filter_unit),
+            mode='right', multiprocessing=False,
+            verbose=verbose)
         self._context['filter_unit'] = fitted_filter_unit
 
         vocab_unit = build_vocab_unit(data_pack, verbose=verbose)
@@ -121,8 +127,9 @@ class BasicPreprocessor(BasePreprocessor):
 
         if self._ngram_size:
             data_pack = data_pack.apply_on_text(
-                self._context['ngram_process_unit'].transform,
+                ChainTransform(self._context['ngram_process_unit']),
                 mode='both',
+                multiprocessing=self.multiprocessing,
                 verbose=verbose
             )
             ngram_unit = build_vocab_unit(data_pack, verbose=verbose)
@@ -141,21 +148,30 @@ class BasicPreprocessor(BasePreprocessor):
         :return: Transformed data as :class:`DataPack` object.
         """
         data_pack = data_pack.copy()
-        data_pack.apply_on_text(chain_transform(self._units), inplace=True,
+        data_pack.apply_on_text(ChainTransform(self._units), inplace=True,
+                                multiprocessing=self.multiprocessing,
                                 verbose=verbose)
 
-        data_pack.apply_on_text(self._context['filter_unit'].transform,
-                                mode='right', inplace=True, verbose=verbose)
-        data_pack.apply_on_text(self._context['vocab_unit'].transform,
-                                mode='both', inplace=True, verbose=verbose)
-        if self._truncated_length_left:
-            data_pack.apply_on_text(self._left_truncatedlength_unit.transform,
-                                    mode='left', inplace=True, verbose=verbose)
-        if self._truncated_length_right:
-            data_pack.apply_on_text(self._right_truncatedlength_unit.transform,
-                                    mode='right', inplace=True,
-                                    verbose=verbose)
-        data_pack.append_text_length(inplace=True, verbose=verbose)
+        data_pack.apply_on_text(ChainTransform(self._context['filter_unit']),
+                                mode='right', inplace=True,
+                                verbose=verbose)
+        data_pack.apply_on_text(ChainTransform(self._context['vocab_unit']),
+                                mode='both', inplace=True,
+                                verbose=verbose)
 
+        if self._truncated_length_left:
+            data_pack.apply_on_text(ChainTransform(self._left_truncatedlength_unit),
+                                    mode='left', inplace=True,
+                                    multiprocessing=self.multiprocessing,
+                                    verbose=verbose)
+        if self._truncated_length_right:
+            data_pack.apply_on_text(ChainTransform(self._right_truncatedlength_unit),
+                                    mode='right', inplace=True,
+                                    multiprocessing=self.multiprocessing,
+                                    verbose=verbose)
+
+        data_pack.append_text_length(inplace=True,
+                                     multiprocessing=self.multiprocessing,
+                                     verbose=verbose)
         data_pack.drop_empty(inplace=True)
         return data_pack

@@ -40,3 +40,21 @@ def test_save_load(data_pack):
     assert len(data_pack) == 2
     assert len(dp) == 2
     shutil.rmtree(dirpath)
+
+
+def pow(x):
+    result = []
+    for n in x:
+        result.append(n ** 2)
+    return result
+
+
+def test_apply_on_text(data_pack):
+    pow.__name__ = "pow 2"
+    d1 = data_pack.apply_on_text(pow, inplace=False)
+    assert d1.left.loc['qid0', 'text_left'] == [1, 4]
+    assert d1.right.loc['did1', 'text_right'] == [9, 16, 25]
+
+    d2 = data_pack.apply_on_text(pow, inplace=False, multiprocessing=True)
+    assert d2.left.loc['qid0', 'text_left'] == [1, 4]
+    assert d2.right.loc['did1', 'text_right'] == [9, 16, 25]

@@ -6,7 +6,6 @@ import typing
 from pathlib import Path
 
 import dill
-
 import matchzoo as mz
 
 
@@ -38,9 +37,10 @@ class BasePreprocessor(metaclass=abc.ABCMeta):
 
     DATA_FILENAME = 'preprocessor.dill'
 
-    def __init__(self):
+    def __init__(self, multiprocessing: bool = False):
         """Initialization."""
         self._context = {}
+        self.multiprocessing = multiprocessing
 
     @property
     def context(self):

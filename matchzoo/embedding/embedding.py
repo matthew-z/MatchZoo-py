@@ -1,15 +1,69 @@
 """Matchzoo toolkit for token embedding."""
 
-import csv
 import typing
 
 import numpy as np
-import pandas as pd
 
 import matchzoo as mz
+from .embedding_helper import _GloVe, _FastText, _Word2Vec
 
 
-class Embedding(object):
+class EmbeddingBase(object):
+    """Base Class for embedding."""
+
+    def build_matrix(self,
+                     term_index: typing.Union[
+                         dict, mz.preprocessors.units.Vocabulary.TermIndex]):
+        """Build embedding matrix for given tokens."""
+        raise NotImplementedError
+
+
+class EmebeddingV2(EmbeddingBase):
+    """Embedding Class V2."""
+
+    def __init__(self, data):
+        """Init Embedding Class."""
+        self._data = data
+        self._output_dim = self._data.dim
+
+    def build_matrix(
+            self,
+            term_index: typing.Union[
+                dict, mz.preprocessors.units.Vocabulary.TermIndex],
+            lower_case_backup=False
+    ) -> np.ndarray:
+        """Build embedding matrix for given tokens."""
+        return self._data.build_matrix(term_index).numpy()
+
+
+class GloVe(EmebeddingV2):
+    """Glove Embedding."""
+
+    def __init__(self, name: str = "840B", dim: int = 300):
+        """Init for Glove Embedding."""
+        data = _GloVe(name=name, dim=dim)
+        super().__init__(data)
+
+
+class FastText(EmebeddingV2):
+    """FastText Embedding."""
+
+    def __init__(self, language: str = "en"):
+        """Init for FastText Embedding."""
+        data = _FastText(language=language)
+        super().__init__(data)
+
+
+class Word2Vec(EmebeddingV2):
+    """Word2Vec Embedding."""
+
+    def __init__(self):
+        """Init for Word2Vec Embedding."""
+        data = _Word2Vec()
+        super().__init__(data)
+
+
+class Embedding(EmbeddingBase):
     """
     Embedding class.
 
@@ -48,9 +102,9 @@ class Embedding(object):
         self._output_dim = output_dim
 
     def build_matrix(
-        self,
-        term_index: typing.Union[
-            dict, mz.preprocessors.units.Vocabulary.TermIndex]
+            self,
+            term_index: typing.Union[
+                dict, mz.preprocessors.units.Vocabulary.TermIndex]
     ) -> np.ndarray:
         """
         Build a matrix using `term_index`.
@@ -69,14 +123,13 @@ class Embedding(object):
             if term in valid_keys:
                 matrix[index] = self._data[term]
             else:
-                matrix[index] = np.random.uniform(-0.2, 0.2, size=self._output_dim)
-
+                matrix[index] = np.random.uniform(-0.2, 0.2,
+                                                  size=self._output_dim)
         return matrix
 
 
 def load_from_file(file_path: str, mode: str = 'word2vec') -> Embedding:
-    """
-    Load embedding from `file_path`.
+    """Load embedding from `file_path`.
 
     :param file_path: Path to file.
     :param mode: Embedding file format mode, one of 'word2vec', 'fasttext'
