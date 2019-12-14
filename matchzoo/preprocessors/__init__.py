@@ -2,6 +2,7 @@ from . import units
 from .naive_preprocessor import NaivePreprocessor
 from .basic_preprocessor import BasicPreprocessor
 from .bert_preprocessor import BertPreprocessor
+from .numeralize_preprocessor import NumeralizePreprocessor
 
 
 def list_available() -> list:

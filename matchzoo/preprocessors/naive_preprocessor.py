@@ -67,7 +67,6 @@ class NaivePreprocessor(BasePreprocessor):
                                 multiprocessing=self.multiprocessing,
                                 verbose=verbose)
         data_pack.append_text_length(inplace=True,
-                                     multiprocessing=self.multiprocessing,
                                      verbose=verbose)
         data_pack.drop_empty(inplace=True)
         return data_pack

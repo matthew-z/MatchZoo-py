@@ -162,16 +162,13 @@ class BasicPreprocessor(BasePreprocessor):
         if self._truncated_length_left:
             data_pack.apply_on_text(ChainTransform(self._left_truncatedlength_unit),
                                     mode='left', inplace=True,
-                                    multiprocessing=self.multiprocessing,
                                     verbose=verbose)
         if self._truncated_length_right:
             data_pack.apply_on_text(ChainTransform(self._right_truncatedlength_unit),
                                     mode='right', inplace=True,
-                                    multiprocessing=self.multiprocessing,
                                     verbose=verbose)
 
         data_pack.append_text_length(inplace=True,
-                                     multiprocessing=self.multiprocessing,
                                      verbose=verbose)
         data_pack.drop_empty(inplace=True)
         return data_pack

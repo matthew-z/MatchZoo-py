@@ -31,7 +31,7 @@ def _apply_on_row(func, data_subset):
 
 
 def _parallelize_on_rows(data, func, num_of_processes=None, verbose=1, desc=None,
-                         batch_size=10):
+                         batch_size=50):
     n_batch = math.ceil(len(data) / batch_size)
     data_splits = filter(lambda x: len(x),
                          np.array_split(data, n_batch))
@@ -39,9 +39,13 @@ def _parallelize_on_rows(data, func, num_of_processes=None, verbose=1, desc=None
     if num_of_processes == -1:
         num_of_processes = None
     with mp.Pool(num_of_processes) as pool:
-        results = tqdm(pool.imap(row_func, data_splits), desc=desc, disable=not bool(verbose), total=n_batch)
-        pool.close()
-        pool.join()
+        results = []
+        with tqdm(desc="Multi-Core "+desc,
+                       disable=not bool(verbose),dynamic_ncols=True,
+                       total=n_batch, unit_scale=batch_size) as pbar:
+           for r in pool.imap(row_func, data_splits):
+               pbar.update()
+               results.append(r)
     return pd.concat(results)
 
 

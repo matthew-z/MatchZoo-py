@@ -42,8 +42,8 @@ import six
 import torch
 from six.moves.urllib.request import urlretrieve
 from tqdm import tqdm
-
 import matchzoo as mz
+from ..preprocessors.units.vocabulary import Vocabulary
 
 logger = logging.getLogger(__name__)
 UNK = "UNK####UNK####UNK"
@@ -247,7 +247,7 @@ class Vectors(object):
     def build_matrix(
             self,
             term_index: typing.Union[
-                dict, mz.preprocessors.units.Vocabulary.TermIndex],
+                dict, Vocabulary.TermIndex],
             lower_case_backup=False
     ) -> torch.Tensor:
         """Build embedding matrix for given tokens."""
