@@ -30,21 +30,19 @@ def _apply_on_row(func, data_subset):
     return data_subset.apply(func)
 
 
-def _parallelize_on_rows(data, func, num_of_processes=-1, verbose=1, desc=None,
+def _parallelize_on_rows(data, func, num_of_processes=None, verbose=1, desc=None,
                          batch_size=10):
     n_batch = math.ceil(len(data) / batch_size)
     data_splits = filter(lambda x: len(x),
                          np.array_split(data, n_batch))
     row_func = functools.partial(_apply_on_row, func)
     if num_of_processes == -1:
-        pool = mp.Pool()
-    else:
-        pool = mp.Pool(num_of_processes)
-    result = pd.concat(tqdm(pool.imap(row_func, data_splits), desc=desc,
-                            disable=not bool(verbose), total=n_batch))
-    pool.close()
-    pool.join()
-    return result
+        num_of_processes = None
+    with mp.Pool(num_of_processes) as pool:
+        results = tqdm(pool.imap(row_func, data_splits), desc=desc, disable=not bool(verbose), total=n_batch)
+        pool.close()
+        pool.join()
+    return pd.concat(results)
 
 
 class DataPack(object):
