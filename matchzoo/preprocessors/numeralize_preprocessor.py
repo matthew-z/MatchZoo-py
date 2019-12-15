@@ -23,7 +23,9 @@ class NumeralizePreprocessor(BasePreprocessor):
                  truncated_length_right: int = None,
                  remove_stop_words: bool = False,
                  lowercase: bool = False,
-                 multiprocessing: bool = False):
+                 multiprocessing: bool = False,
+                 vocab_max_size=None,
+                 terms=None):
         super().__init__(multiprocessing)
 
         self._units = [units.Tokenize()]
@@ -49,14 +51,15 @@ class NumeralizePreprocessor(BasePreprocessor):
                 self._truncated_length_right, self._truncated_mode
             )
 
-    def build_vocab_from_embedding(self, embedding: EmebeddingV2,
-                                   max_size: int = None):
-        tokens = embedding.index_term
+        if terms:
+            self._build_vocab_from_embedding(terms, vocab_max_size)
+
+    def _build_vocab_from_embedding(self, terms, max_size: int = None):
 
         if max_size:
-            self._context['vocab_unit'].fit(tokens[:max_size])
+            self._context['vocab_unit'].fit(terms[:max_size])
         else:
-            self._context['vocab_unit'].fit(tokens)
+            self._context['vocab_unit'].fit(terms)
 
     def fit(self, data_pack: DataPack, verbose: int = 1):
         """
