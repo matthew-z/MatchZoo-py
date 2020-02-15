@@ -65,6 +65,7 @@ class Trainer:
         start_epoch: int = 1,
         epochs: int = 10,
         validate_interval: typing.Optional[int] = None,
+        batch_accumulation: int=1,
         scheduler: typing.Any = None,
         scheduler_fn: typing.Callable = None,
         clip_norm: typing.Union[float, int] = None,
@@ -86,6 +87,7 @@ class Trainer:
         )
         self._scheduler = scheduler if not scheduler_fn else scheduler_fn(self._optimizer)
         self._clip_norm = clip_norm
+        self._batch_accumulation = batch_accumulation
         self._criterions = self._task.losses
         if not key:
             key = self._task.metrics[0]
@@ -205,14 +207,13 @@ class Trainer:
             else:
                 self.restore_model(checkpoint)
 
-    def _backward(self, loss):
+    def _backward(self, loss, step):
         """
         Computes the gradient of current `loss` graph leaves.
 
         :param loss: Tensor. Loss of model.
 
         """
-        self._optimizer.zero_grad()
 
         if self._fp16:
             with amp.scale_loss(loss, self._optimizer) as scaled_loss:
@@ -220,11 +221,13 @@ class Trainer:
         else:
             loss.backward()
 
-        if self._clip_norm:
-            nn.utils.clip_grad_norm_(
-                self._model.parameters(), self._clip_norm
-            )
-        self._optimizer.step()
+        if (step+1) % self._batch_accumulation == 0 :
+            if self._clip_norm:
+                nn.utils.clip_grad_norm_(
+                    self._model.parameters(), self._clip_norm
+                )
+            self._optimizer.step()
+            self._optimizer.zero_grad()
 
     def _run_scheduler(self):
         """Run scheduler."""
@@ -273,7 +276,7 @@ class Trainer:
                 loss = torch.sum(
                     *[c(outputs, target) for c in self._criterions]
                 )
-                self._backward(loss)
+                self._backward(loss, step)
                 train_loss.update(loss.item())
 
                 # Set progress bar
@@ -300,6 +303,9 @@ class Trainer:
                         break
                     elif self._early_stopping.is_best_so_far:
                         self._save()
+                        
+            if self._batch_accumulation > 1:
+                self._optimizer.zero_grad()
 
     def evaluate(
         self,
