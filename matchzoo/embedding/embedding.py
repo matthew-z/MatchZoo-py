@@ -50,7 +50,11 @@ class GloVe(EmebeddingV2):
     def __init__(self, name: str = "840B", dim: int = 300):
         """Init for Glove Embedding."""
         data = _GloVe(name=name, dim=dim)
+        self.name = ".".join(["Glove", name, "%d"%dim])
         super().__init__(data)
+
+    def __str__(self):
+        return self.name
 
 
 class FastText(EmebeddingV2):

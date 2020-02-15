@@ -68,6 +68,15 @@ class Vocabulary(StatefulUnit):
             self._context['term_index'][term] = idx
             self._context['index_term'][idx] = term
 
+    def fit_incrementally(self, tokens):
+        terms = sorted(set(tokens))
+        for term in terms:
+            if term in self._context['term_index']:
+                continue
+            idx = len(self._context['term_index'])
+            self._context['term_index'][term] = idx
+            self._context['index_term'][idx] = term
+
     def transform(self, input_: list) -> list:
         """Transform a list of tokens to corresponding indices."""
         return [self._context['term_index'][token] for token in input_]

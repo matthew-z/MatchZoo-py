@@ -103,19 +103,19 @@ class DataLoader(object):
     def id_right(self) -> np.ndarray:
         """`id_right` getter."""
         x, _ = self._dataset[:]
-        return x['id_left']
+        return x['id_right']
 
     @property
     def text_right(self) -> np.ndarray:
         """`text_right` getter."""
         x, _ = self._dataset[:]
-        return x['id_left']
+        return x['text_right']
 
     @property
     def text_left(self) -> np.ndarray:
         """`text_left` getter."""
         x, _ = self._dataset[:]
-        return x['id_left']
+        return x['text_left']
 
     @property
     def label(self) -> np.ndarray:

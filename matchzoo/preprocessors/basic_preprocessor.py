@@ -68,6 +68,7 @@ class BasicPreprocessor(BasePreprocessor):
                  filter_high_freq: float = float('inf'),
                  remove_stop_words: bool = False,
                  ngram_size: typing.Optional[int] = None,
+                 extra_terms: typing.List[str] = None,
                  multiprocessing: bool = False):
         """Initialization."""
         super().__init__(multiprocessing)
@@ -96,6 +97,9 @@ class BasicPreprocessor(BasePreprocessor):
                 ngram=ngram_size, reduce_dim=True
             )
 
+        self.extra_terms = extra_terms
+
+
     def fit(self, data_pack: DataPack, verbose: int = 1):
         """
         Fit pre-processing context for transformation.
@@ -119,6 +123,8 @@ class BasicPreprocessor(BasePreprocessor):
         self._context['filter_unit'] = fitted_filter_unit
 
         vocab_unit = build_vocab_unit(data_pack, verbose=verbose)
+        if self.extra_terms:
+            vocab_unit.fit_incrementally(self.extra_terms)
         self._context['vocab_unit'] = vocab_unit
 
         vocab_size = len(vocab_unit.state['term_index'])

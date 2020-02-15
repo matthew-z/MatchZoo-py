@@ -228,11 +228,11 @@ class BaseModel(nn.Module, abc.ABC):
         fixed_length_left: int = None,
         fixed_length_right: int = None,
         pad_word_value: typing.Union[int, str] = 0,
-        pad_word_mode: str = 'pre',
+        pad_word_mode: str = 'post',
         with_ngram: bool = False,
         fixed_ngram_length: int = None,
         pad_ngram_value: typing.Union[int, str] = 0,
-        pad_ngram_mode: str = 'pre'
+        pad_ngram_mode: str = 'post'
     ) -> BaseCallback:
         """
         Model default padding callback.

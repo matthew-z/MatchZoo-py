@@ -108,8 +108,8 @@ class MatchPyramid(BaseModel):
         # Process left and right input.
         # shape = [B, L, D]
         # shape = [B, R, D]
-        embed_left = self.embedding(input_left.long())
-        embed_right = self.embedding(input_right.long())
+        embed_left = self.dropout(self.embedding(input_left.long()))
+        embed_right = self.dropout(self.embedding(input_right.long()))
 
         # Compute matching signal
         # shape = [B, 1, L, R]

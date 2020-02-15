@@ -6,7 +6,6 @@ from matchzoo import DataPack
 from matchzoo.engine.base_preprocessor import BasePreprocessor
 from . import units
 from .chain_transform import ChainTransform
-from matchzoo.embedding import EmebeddingV2
 
 tqdm.pandas()
 
@@ -54,12 +53,18 @@ class NumeralizePreprocessor(BasePreprocessor):
         if terms:
             self._build_vocab_from_embedding(terms, vocab_max_size)
 
+
     def _build_vocab_from_embedding(self, terms, max_size: int = None):
 
         if max_size:
-            self._context['vocab_unit'].fit(terms[:max_size])
+            self._context['vocab_unit'].fit(list(terms)[:max_size])
         else:
             self._context['vocab_unit'].fit(terms)
+
+        vocab_size = len(self._context['vocab_unit'].state['term_index'])
+        self._context['vocab_size'] = vocab_size
+        self._context['embedding_input_dim'] = vocab_size
+
 
     def fit(self, data_pack: DataPack, verbose: int = 1):
         """

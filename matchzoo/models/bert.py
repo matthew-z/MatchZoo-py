@@ -1,9 +1,7 @@
 """An implementation of Bert Model."""
 import typing
 
-import torch
 import torch.nn as nn
-from pytorch_transformers import BertModel
 
 from matchzoo import preprocessors
 from matchzoo.engine.param_table import ParamTable
@@ -25,7 +23,7 @@ class Bert(BaseModel):
         params.add(Param(name='mode', value='bert-base-uncased',
                          desc="Pretrained Bert model."))
         params.add(Param(
-            'dropout_rate', 0.0,
+            'dropout_rate', 0.2,
             hyper_space=hyper_spaces.quniform(
                 low=0.0, high=0.8, q=0.01),
             desc="The dropout rate."
@@ -35,10 +33,11 @@ class Bert(BaseModel):
     @classmethod
     def get_default_preprocessor(
         cls,
-        mode: str = 'bert-base-uncased'
+        mode: str = 'bert-base-uncased',
+        **kwargs
     ) -> BasePreprocessor:
         """:return: Default preprocessor."""
-        return preprocessors.BertPreprocessor(mode=mode)
+        return preprocessors.BertPreprocessor(mode=mode, **kwargs)
 
     @classmethod
     def get_default_padding_callback(
@@ -46,7 +45,7 @@ class Bert(BaseModel):
         fixed_length_left: int = None,
         fixed_length_right: int = None,
         pad_value: typing.Union[int, str] = 0,
-        pad_mode: str = 'pre'
+        pad_mode: str = 'post'
     ):
         """:return: Default padding callback."""
         return callbacks.BertPadding(

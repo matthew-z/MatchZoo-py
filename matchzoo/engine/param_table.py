@@ -141,6 +141,12 @@ class ParamTable(object):
         """:return: Parameter table keys."""
         return self._params.keys()
 
+    def to_dict(self):
+        d = {}
+        for p in self:
+            d[p.name] = p.value
+        return d
+
     def __contains__(self, item):
         """:return: `True` if parameter in parameters."""
         return item in self._params

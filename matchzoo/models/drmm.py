@@ -37,6 +37,8 @@ class DRMM(BaseModel):
                          desc="The value to be masked from inputs."))
         params.add(Param(name='hist_bin_size', value=30,
                          desc="The number of bin size of the histogram."))
+        params.add(Param(name='dropout', value=0.2,
+                         desc="Dropout rate."))
         params['mlp_num_fan_out'] = 1
         return params
 

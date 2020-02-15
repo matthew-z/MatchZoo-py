@@ -257,7 +257,7 @@ class BertPadding(BaseCallback):
         fixed_length_left: int = None,
         fixed_length_right: int = None,
         pad_value: typing.Union[int, str] = 0,
-        pad_mode: str = 'pre',
+        pad_mode: str = 'post',
     ):
         """Init."""
         self._padding = BasicPadding(fixed_length_left=fixed_length_left,
