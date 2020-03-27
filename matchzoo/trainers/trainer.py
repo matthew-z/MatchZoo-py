@@ -10,13 +10,16 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-import matchzoo
 from matchzoo import tasks
 from matchzoo.dataloader import DataLoader
 from matchzoo.engine.base_model import BaseModel
 from matchzoo.engine.base_metric import BaseMetric
 from matchzoo.utils import AverageMeter, Timer, EarlyStopping
 
+try:
+    from apex import amp
+except ImportError:
+    pass
 
 class Trainer:
     """
@@ -62,27 +65,30 @@ class Trainer:
         start_epoch: int = 1,
         epochs: int = 10,
         validate_interval: typing.Optional[int] = None,
+        batch_accumulation: int=1,
         scheduler: typing.Any = None,
+        scheduler_fn: typing.Callable = None,
         clip_norm: typing.Union[float, int] = None,
         patience: typing.Optional[int] = None,
         key: typing.Any = None,
         checkpoint: typing.Union[str, Path] = None,
         save_dir: typing.Union[str, Path] = None,
         save_all: bool = False,
+        fp16:bool = False,
         verbose: int = 1,
         **kwargs
     ):
         """Base Trainer constructor."""
+        self._optimizer = optimizer
+        self._fp16 = fp16
         self._load_model(model, device)
         self._load_dataloader(
             trainloader, validloader, validate_interval
         )
-
-        self._optimizer = optimizer
-        self._scheduler = scheduler
+        self._scheduler = scheduler if not scheduler_fn else scheduler_fn(self._optimizer)
         self._clip_norm = clip_norm
+        self._batch_accumulation = batch_accumulation
         self._criterions = self._task.losses
-
         if not key:
             key = self._task.metrics[0]
         self._early_stopping = EarlyStopping(
@@ -152,16 +158,25 @@ class Trainer:
         self._model = model
 
         if isinstance(device, list) and len(device):
+            # DataParallel
+            self._device = device[0]
+            self._model.to(self._device)
+            self._init_fp16()
             self._data_parallel = True
             self._model = torch.nn.DataParallel(self._model, device_ids=device)
-            self._device = device[0]
         else:
+            # single GPU/CPU
             if not (isinstance(device, torch.device) or isinstance(device, int)):
                 device = torch.device(
                     "cuda" if torch.cuda.is_available() else "cpu")
             self._device = device
+            self._model.to(self._device)
+            self._init_fp16()
 
-        self._model.to(self._device)
+    def _init_fp16(self):
+        if self._fp16:
+            self._model, self._optimizer = amp.initialize(
+                self._model, self._optimizer, verbosity=1, opt_level="O1")
 
     def _load_path(
         self,
@@ -192,20 +207,27 @@ class Trainer:
             else:
                 self.restore_model(checkpoint)
 
-    def _backward(self, loss):
+    def _backward(self, loss, step):
         """
         Computes the gradient of current `loss` graph leaves.
 
         :param loss: Tensor. Loss of model.
 
         """
-        self._optimizer.zero_grad()
-        loss.backward()
-        if self._clip_norm:
-            nn.utils.clip_grad_norm_(
-                self._model.parameters(), self._clip_norm
-            )
-        self._optimizer.step()
+
+        if self._fp16:
+            with amp.scale_loss(loss, self._optimizer) as scaled_loss:
+                scaled_loss.backward()
+        else:
+            loss.backward()
+
+        if (step+1) % self._batch_accumulation == 0 :
+            if self._clip_norm:
+                nn.utils.clip_grad_norm_(
+                    self._model.parameters(), self._clip_norm
+                )
+            self._optimizer.step()
+            self._optimizer.zero_grad()
 
     def _run_scheduler(self):
         """Run scheduler."""
@@ -237,7 +259,7 @@ class Trainer:
 
         The training steps:
             - Get batch and feed them into model
-            - Get outputs. Caculate all losses and sum them up
+            - Get outputs. Calculate all losses and sum them up
             - Loss backwards and optimizer steps
             - Evaluation
             - Update and output result
@@ -254,7 +276,7 @@ class Trainer:
                 loss = torch.sum(
                     *[c(outputs, target) for c in self._criterions]
                 )
-                self._backward(loss)
+                self._backward(loss, step)
                 train_loss.update(loss.item())
 
                 # Set progress bar
@@ -281,6 +303,9 @@ class Trainer:
                         break
                     elif self._early_stopping.is_best_so_far:
                         self._save()
+                        
+            if self._batch_accumulation > 1:
+                self._optimizer.zero_grad()
 
     def evaluate(
         self,
@@ -340,7 +365,8 @@ class Trainer:
 
     def predict(
         self,
-        dataloader: DataLoader
+        dataloader: DataLoader,
+        verbose=0
     ) -> np.array:
         """
         Generate output predictions for the input samples.
@@ -352,7 +378,8 @@ class Trainer:
         with torch.no_grad():
             self._model.eval()
             predictions = []
-            for batch in dataloader:
+            for batch in tqdm(dataloader, desc="Prediction",
+                              disable=(not verbose)):
                 inputs = batch[0]
                 outputs = self._model(inputs).detach().cpu()
                 predictions.append(outputs)

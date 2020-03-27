@@ -12,7 +12,6 @@ import matchzoo as mz
 
 @pytest.fixture(scope='module', params=[
     mz.tasks.Ranking(losses=mz.losses.RankCrossEntropyLoss(num_neg=2)),
-    mz.tasks.Classification(num_classes=2),
 ])
 def task(request):
     return request.param

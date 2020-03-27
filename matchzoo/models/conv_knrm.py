@@ -72,12 +72,19 @@ class ConvKNRM(BaseModel):
             desc="The `exact_sigma` denotes the `sigma` "
                  "for exact match."
         ))
+
+        params.add(Param(
+            'dropout_rate', 0,
+            hyper_space=hyper_spaces.quniform(
+                low=0.0, high=0.8, q=0.01),
+            desc="The dropout rate."
+        ))
         return params
 
     def build(self):
         """Build model structure."""
         self.embedding = self._make_default_embedding_layer()
-
+        self.dropout = nn.Dropout(p=self._params['dropout_rate'])
         self.q_convs = nn.ModuleList()
         self.d_convs = nn.ModuleList()
         for i in range(self._params['max_ngram']):
@@ -113,8 +120,8 @@ class ConvKNRM(BaseModel):
 
         query, doc = inputs['text_left'], inputs['text_right']
 
-        q_embed = self.embedding(query.long()).transpose(1, 2)
-        d_embed = self.embedding(doc.long()).transpose(1, 2)
+        q_embed = self.dropout(self.embedding(query.long()).transpose(1, 2))
+        d_embed = self.dropout(self.embedding(doc.long()).transpose(1, 2))
 
         q_convs = []
         d_convs = []
@@ -138,6 +145,6 @@ class ConvKNRM(BaseModel):
                     KM.append(K)
 
         phi = torch.stack(KM, dim=1)
-
+        phi = self.dropout(phi)
         out = self.out(phi)
         return out

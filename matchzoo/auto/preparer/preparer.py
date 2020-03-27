@@ -100,7 +100,7 @@ class Preparer(object):
         if not preprocessor:
             preprocessor = model_class.get_default_preprocessor()
 
-        preprocessor.fit(data_pack, verbose=0)
+        preprocessor.fit(data_pack, verbose=1)
 
         model, embedding_matrix = self._build_model(
             model_class,

@@ -130,8 +130,8 @@ class BasicPadding(BaseCallback):
         """Pad `x['text_left']` and `x['text_right]`."""
 
         batch_size = len(x['id_left'])
-        pad_length_left = max(x['length_left'])
-        pad_length_right = max(x['length_right'])
+        pad_length_left = int(max(x['length_left']))
+        pad_length_right = int(max(x['length_right']))
         if self._with_ngram:
             ngram_length_left = max([len(w)
                                      for k in x['ngram_left'] for w in k])
@@ -257,7 +257,7 @@ class BertPadding(BaseCallback):
         fixed_length_left: int = None,
         fixed_length_right: int = None,
         pad_value: typing.Union[int, str] = 0,
-        pad_mode: str = 'pre',
+        pad_mode: str = 'post',
     ):
         """Init."""
         self._padding = BasicPadding(fixed_length_left=fixed_length_left,

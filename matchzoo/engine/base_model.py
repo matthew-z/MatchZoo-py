@@ -2,21 +2,19 @@
 
 import abc
 import typing
-from pathlib import Path
 
 import numpy as np
 import torch
 import torch.nn as nn
-
-from matchzoo.utils import parse_activation
-from matchzoo.engine.base_callback import BaseCallback
-from matchzoo.engine import hyper_spaces
-from matchzoo.engine.base_preprocessor import BasePreprocessor
-from matchzoo.engine.param_table import ParamTable
-from matchzoo.engine.param import Param
-from matchzoo.dataloader import callbacks
 from matchzoo import preprocessors
 from matchzoo import tasks
+from matchzoo.dataloader import callbacks
+from matchzoo.engine import hyper_spaces
+from matchzoo.engine.base_callback import BaseCallback
+from matchzoo.engine.base_preprocessor import BasePreprocessor
+from matchzoo.engine.param import Param
+from matchzoo.engine.param_table import ParamTable
+from matchzoo.utils import parse_activation
 
 
 class BaseModel(nn.Module, abc.ABC):
@@ -202,6 +200,7 @@ class BaseModel(nn.Module, abc.ABC):
         filter_high_freq: float = float('inf'),
         remove_stop_words: bool = False,
         ngram_size: typing.Optional[int] = None,
+        **kwargs
     ) -> BasePreprocessor:
         """
         Model default preprocessor.
@@ -219,7 +218,8 @@ class BaseModel(nn.Module, abc.ABC):
             filter_low_freq=filter_low_freq,
             filter_high_freq=filter_high_freq,
             remove_stop_words=remove_stop_words,
-            ngram_size=ngram_size
+            ngram_size=ngram_size,
+            **kwargs
         )
 
     @classmethod
@@ -228,11 +228,11 @@ class BaseModel(nn.Module, abc.ABC):
         fixed_length_left: int = None,
         fixed_length_right: int = None,
         pad_word_value: typing.Union[int, str] = 0,
-        pad_word_mode: str = 'pre',
+        pad_word_mode: str = 'post',
         with_ngram: bool = False,
         fixed_ngram_length: int = None,
         pad_ngram_value: typing.Union[int, str] = 0,
-        pad_ngram_mode: str = 'pre'
+        pad_ngram_mode: str = 'post'
     ) -> BaseCallback:
         """
         Model default padding callback.

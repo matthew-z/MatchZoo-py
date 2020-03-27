@@ -1,4 +1,6 @@
-from .stateful_unit import StatefulUnit
+from collections import OrderedDict
+
+from matchzoo.preprocessors.units import StatefulUnit
 
 
 class Vocabulary(StatefulUnit):
@@ -46,7 +48,7 @@ class Vocabulary(StatefulUnit):
         self._context['term_index'] = self.TermIndex()
         self._context['index_term'] = dict()
 
-    class TermIndex(dict):
+    class TermIndex(OrderedDict):
         """Map term to index."""
 
         def __missing__(self, key):
@@ -61,10 +63,25 @@ class Vocabulary(StatefulUnit):
         self._context['index_term'][1] = self._oov
 
         terms = sorted(set(tokens))
-        for index, term in enumerate(terms):
-            self._context['term_index'][term] = index + 2
-            self._context['index_term'][index + 2] = term
+        for term in terms:
+            idx = len(self._context['term_index'])
+            self._context['term_index'][term] = idx
+            self._context['index_term'][idx] = term
+
+    def fit_incrementally(self, tokens):
+        terms = sorted(set(tokens))
+        for term in terms:
+            if term in self._context['term_index']:
+                continue
+            idx = len(self._context['term_index'])
+            self._context['term_index'][term] = idx
+            self._context['index_term'][idx] = term
 
     def transform(self, input_: list) -> list:
         """Transform a list of tokens to corresponding indices."""
         return [self._context['term_index'][token] for token in input_]
+
+    def __len__(self):
+        """Vocab Size."""
+
+        return len(self._context["term_index"])
